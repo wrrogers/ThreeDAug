@@ -1,76 +1,81 @@
-import numpy as np # linear algebra
+import time
+import numpy as np
 import os
-import cv2
-from PIL import Image
 import random
+from itertools import product
+
 from multiprocessing.pool import ThreadPool, Pool
+from multiprocessing import current_process, cpu_count
+
+import cv2
+from skimage.transform import rotate
+from PIL import Image
+
+from tools import load_imgs, get_imgs, getFalsePoints, cubeEm
 
 class ThreeDAug:
-    def __init__(self, path, extension = 'png', has_mask = True,
-                 image_prefix = '', image_suffix = '_i', 
-                 mask_prefix  = '', mask_suffix  = '_m'):
-        '''
-        Import image
-        :param path: Path to the image
-        :param image_name: image name
-        '''
+    def __init__(self, image, mask = np.array([None]), pool_size = 1):
         self.params = {}
-        path = path
-        files = os.listdir(path)
-        image_prefix = image_prefix
-        image_suffix = image_suffix
-        extension = extension
-        end   = (len(image_suffix) + 1 + len(extension)) *-1
-        start = (len(image_prefix)) * -1
-        image_files = [f for f in files if f[end:].upper() == "{}.{}".format(image_suffix, extension).upper()]
-        image_files = [f for f in image_files if f[:start].upper() == image_prefix.upper()]
-        self.image = self.load_imgs(image_files)
-        
-        if has_mask:
-            mask_prefix = mask_prefix
-            mask_suffix = mask_suffix
-            end   = (len(mask_suffix) + 1 + len(extension)) *-1
-            start = (len(mask_prefix)) * -1
-            mask_files = [f for f in files if f[end:].upper() == "{}.{}".format(mask_suffix, extension).upper()]
-            mask_files = [f for f in mask_files if f[:start].upper() == mask_prefix.upper()]
-            self.mask = self.load_mask(mask_files, type = 'mask')
-        
-        #print(image_files)
-        #print(mask_files)
-        #self.image = cv2.imread(path+image_name)
-        
-    def load_imgs(self, files, type = 'image'):
-        pool = Pool()
-        img = pool.map(Image.open,files)
-        img = [np.array(i) for i in img]
-        img = np.asarray(img)
-        if type == 'mask':
-            img = int(img / 255)
-        return img
-    
+        self.random_rotate = 0
+        self.image = image
+        self.mask = mask
+        self.pool_size = pool_size
+
+        self.w = self.image.shape[1]
+        self.h = self.image.shape[0]
+          
     def get_img(self):
         return self.image
-    
-    def get_mask(self):
-        return self.mask
         
-    def rotate(self, angle=90, scale=1.0):
+    def add_rotate(self, angle=90, scale=1.0):
         self.params['rotate'] = [angle, scale]
+        
+    def add_flip(self, vflip=True, hflip=True):
+        self.params['flip'] = [vflip, hflip]
 
-    def rotateIt(self):
+    def start_process(self):
+        print ('Starting process ...', current_process().name)
+
+    def process(self, verbose = False):
+        if len(self.params) < 1:
+            print("You first need to add parameters (i.e. add_flip or add_rotate)")
+        else:
+            for p in self.params.items():
+                if p[0] == 'rotate':
+                    self.random_rotate = random.randint(1, self.params['rotate'][0])
+                    if verbose:
+                        print("\nPerforming rotation of", self.random_rotate, "degrees ...")
+                        tick = time.clock()
+                    pool = Pool(processes=self.pool_size, initializer=self.start_process)
+                    image = pool.map(self.rotateIt, self.image)
+                    self.image = np.asarray(image)
+                    pool.close() # no more tasks
+                    pool.join()  # wrap up current tasks
+                    if verbose:
+                        tock = time.clock()
+                        print("   ... completed in", tock-tick, "seconds.\n")                    
+                        
+                if p[0] == 'flip':
+                    pass
+                    #print("Performing flip ...")
+
+    def rotateIt(self, image):
         '''
         Rotate the image
         :param image: image to be processed
         :param angle: Rotation angle in degrees. Positive values mean counter-clockwise rotation (the coordinate origin is assumed to be the top-left corner).
         :param scale: Isotropic scale factor.
         '''
-        w = image.shape[1]
-        h = image.shape[0]
+
         #rotate matrix
-        M = cv2.getRotationMatrix2D((w/2,h/2), angle, scale)
+        M = cv2.getRotationMatrix2D((self.w/2,self.h/2), self.random_rotate, self.params['rotate'][1])
         #rotate
-        image = cv2.warpAffine(image,M,(w,h))
-        return image
+        image = cv2.warpAffine(image,M,(self.w,self.h))
+        
+        #im = Image.fromarray(image)
+        #im.rotate(self.params['rotate'][0], Image.BICUBIC, expand=True)
+        
+        return np.array(image)
 
     def flipIt(self, image, vflip=False, hflip=False):
         '''
@@ -87,17 +92,41 @@ class ThreeDAug:
             image = cv2.flip(image, flipCode=c)
         return image 
             
+
+#image = load_png(r'F:\Data\MILDBL\mild_extracted_images\MILD_ - 128CM290341')
             
+#ThreeDAug('F:\Data\MILDBL\mild_extracted_images\MILD_ - 101AR300932')
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    path = r'F:\Data\MILDBL\mild_extracted_images\MILD_ - 128CM290341'
+    
+    img, mask = get_imgs(path, has_mask = True)
+    #points = getFalsePoints(mask, 4)
+    #cubes = cubeEm(img, points)
+    #tda = ThreeDAug(cubes[0])     
+    #cube = tda.get_img()
+    #tda.add_rotate(angle = 15)
+    #tda.add_flip()
+    #tda.process(verbose = True)
+    #new_cube = tda.get_img()
+    #plt.imshow(new_cube[25, :, :])
+    
+    tda = ThreeDAug(img)
+    tda.add_rotate(angle = 15)    
+    tda.process(verbose = True)            
             
-ThreeDAug(r'F:\Data\MILDBL\mild_extracted_images\MILD_ - 101AR300932')
-            
-            
-            
-            
-            
-            
-            
-            
+    
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
             
             
             
