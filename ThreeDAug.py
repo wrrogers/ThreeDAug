@@ -48,6 +48,9 @@ class ThreeDAug:
         
     def add_flip(self, vflip=True, hflip=True):
         self.params['flip'] = [vflip, hflip]
+        
+    def add_shift(self, shift = True):
+        self.params['shift'] = [shift]
 
     def add_elastic(self, alpha = 3, sigma = 0.07, alpha_affine = 0.09):
         self.params['elastic'] = [alpha*self.rad*2, sigma*self.rad*2, alpha_affine*self.rad*2, 10000]
@@ -232,6 +235,12 @@ class ThreeDAug:
     
     def cubeEm(self, points):
         points = np.array(points)
+        if 'shift' in list(self.params.keys()):
+            for n, p in enumerate(points):
+                rand_x = random.randint(1, (self.params['shift'][0] * 2) - self.params['shift'][0])
+                rand_y = random.randint(1, (self.params['shift'][0] * 2) - self.params['shift'][0])
+                points[n] = [p[0], p[1] + rand_y, p[2] + rand_x]
+            
         cubes = np.empty((points.shape[0], self.z, self.rad*2, self.rad*2))
         for n, point in enumerate(points):
             
@@ -261,6 +270,7 @@ if __name__ == "__main__":
     tda.add_rotate(angle = 15)
     tda.add_flip(vflip=True, hflip=True)    
     tda.add_elastic()
+    tda.add_shift()
     tda.process(verbose = True)
     #new_img = tda.get_img()
     #plt.imshow(new_img[150,:,:])
