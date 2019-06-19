@@ -77,7 +77,7 @@ def get_imgs(path, extension = 'png', has_mask = True,
         mask = load_imgs(mask_files, pool_size = pool_size, type = 'mask')
         if verbose:
             tock = time.clock()
-            print("   ... mask loaded in", tock - tick, "seconds.")     
+            print("   ... mask loaded in", tock - tick, "seconds.\n")     
         return image, mask
     
     return image

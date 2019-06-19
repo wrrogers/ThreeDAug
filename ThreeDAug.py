@@ -12,6 +12,7 @@ import cv2
 from skimage.transform import rotate
 from scipy.ndimage.interpolation import map_coordinates
 from scipy.ndimage.filters import gaussian_filter
+from skimage.util import random_noise
 from PIL import Image
 from sklearn.metrics.pairwise import euclidean_distances
 from tools import load_imgs, get_imgs
@@ -54,6 +55,25 @@ class ThreeDAug:
 
     def add_elastic(self, alpha = 3, sigma = 0.07, alpha_affine = 0.09):
         self.params['elastic'] = [alpha*self.rad*2, sigma*self.rad*2, alpha_affine*self.rad*2, 10000]
+
+    def add_noise(self, modes = None, proba = .5):
+        noises = ["gaussian", "localvar", "poisson", "salt", "pepper", "s&p", "speckle"]
+        if modes == 'all' or modes == ['all'] or modes == None:
+            self.params['noise'] = [noises, proba]
+        else:
+            for mode in modes:
+                if mode not in noises:
+                    print("Error:", mode, " is not a supported.", \
+                          "the supported modes:", noises)
+                    break
+                else:
+                    self.params['noise'] = [modes, proba]
+                    
+    def get_params(self):
+        print(" -Parameter-    -Variables\n", \
+              "------------------------------")
+        for param in self.params.items():
+            print("  {:<10}\t{}".format(param[0], param[1]))
 
     def start_process(self):
         print ('Starting process ...', current_process().name)
@@ -116,7 +136,6 @@ class ThreeDAug:
                         print("\n      Performing flips horizontally: {} and vertically: {}.".format( self.random['hflip'], self.random['vflip'] ))
                         tick = time.clock()
                     if self.random['vflip'] != False or self.random['hflip'] != False:
-                        
                         flipped_image = np.empty(image.shape)
                         for n, slice in enumerate(image):
                             flipped_image[n, :, :] = self.flipIt(slice)
@@ -135,7 +154,19 @@ class ThreeDAug:
                     if verbose:
                         tock = time.clock()
                         print("         ... completed in", round(tock-tick, 4), "seconds.\n")                       
-                
+                        
+                if p == 'noise':
+                    probability = random.randint(1, 100) / 100
+                    if verbose:
+                        tick = time.clock()
+                        print("\n      Randomly adding noise ...")
+                    if probability < self.params['noise'][1]:
+                        mode = random.choice(self.params['noise'][0])
+                        image = self.noiseIt(image, mode)
+                    if verbose:
+                        tock = time.clock()
+                        print("         ... completed in", round(tock-tick, 4), "seconds.\n")   
+                        
             return image
 
     def rotateIt(self, image):
@@ -203,6 +234,10 @@ class ThreeDAug:
     
         return map_coordinates(image, indices, order=1, mode='reflect').reshape(shape)
     
+    def noiseIt(self, img, mode):
+        gimg = random_noise(img, mode=mode)
+        return gimg
+    
     def getFalsePoints(self, mask, num_cubes, true_pos = []):
         #middle = 0
         points = []
@@ -267,11 +302,16 @@ if __name__ == "__main__":
     img, mask = get_imgs(path, has_mask = True)
     
     tda = ThreeDAug(points, img, mask, z = 50, rad = 25)
-    tda.add_rotate(angle = 15)
-    tda.add_flip(vflip=True, hflip=True)    
-    tda.add_elastic()
-    tda.add_shift()
+    #tda.add_rotate(angle = 15)
+    #tda.add_flip(vflip=True, hflip=True)    
+    #tda.add_elastic()
+    #tda.add_shift()
+    tda.add_noise(proba = .3)
+    
+    tda.get_params()
     tda.process(verbose = True)
     #new_img = tda.get_img()
     #plt.imshow(new_img[150,:,:])
+    
+    
     
