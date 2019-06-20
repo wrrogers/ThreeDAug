@@ -175,7 +175,7 @@ class ThreeDAug:
                     if verbose:
                         tick = time.clock()
                         print("\n      Randomly zooming by up to", self.params['zoom'][0], "pixels ...")                    
-                    if probability < self.params['noise'][1]:
+                    if probability < self.params['zoom'][1]:
                         pxl = random.randint(1, self.params['zoom'][0])
                         image = self.zoomIt(image, pxl = pxl)
                     if verbose:
@@ -329,7 +329,8 @@ if __name__ == "__main__":
     #tda.add_flip(vflip=True, hflip=True)    
     #tda.add_elastic()
     #tda.add_shift()
-    tda.add_noise(proba = .3)
+    #tda.add_noise(proba = .3)
+    tda.add_zoom()
     
     tda.get_params()
     tda.process(verbose = True)
