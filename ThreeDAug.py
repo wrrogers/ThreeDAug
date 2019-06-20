@@ -68,7 +68,10 @@ class ThreeDAug:
                     break
                 else:
                     self.params['noise'] = [modes, proba]
-                    
+    
+    def add_zoom(self, pxl = 6, proba = .5):
+        self.params['zoom'] = [pxl, proba]
+            
     def get_params(self):
         print(" -Parameter-    -Variables\n", \
               "------------------------------")
@@ -153,7 +156,7 @@ class ThreeDAug:
                     image = self.elastIt(image, random_int)
                     if verbose:
                         tock = time.clock()
-                        print("         ... completed in", round(tock-tick, 4), "seconds.\n")                       
+                        print("         ... completed in", round(tock-tick, 4), "seconds.")                       
                         
                 if p == 'noise':
                     probability = random.randint(1, 100) / 100
@@ -165,8 +168,19 @@ class ThreeDAug:
                         image = self.noiseIt(image, mode)
                     if verbose:
                         tock = time.clock()
-                        print("         ... completed in", round(tock-tick, 4), "seconds.\n")   
-                        
+                        print("         ... completed in", round(tock-tick, 4), "seconds.")   
+                
+                if p == 'zoom':
+                    probability = random.randint(1, 100) / 100
+                    if verbose:
+                        tick = time.clock()
+                        print("\n      Randomly zooming by up to", self.params['zoom'][0], "pixels ...")                    
+                    if probability < self.params['noise'][1]:
+                        pxl = random.randint(1, self.params['zoom'][0])
+                        image = self.zoomIt(image, pxl = pxl)
+                    if verbose:
+                        tock = time.clock()
+                        print("         ... completed in", round(tock-tick, 4), "seconds.\n")                        
             return image
 
     def rotateIt(self, image):
@@ -235,8 +249,17 @@ class ThreeDAug:
         return map_coordinates(image, indices, order=1, mode='reflect').reshape(shape)
     
     def noiseIt(self, img, mode):
+        img = img/255.0
         gimg = random_noise(img, mode=mode)
+        img = img * 255
         return gimg
+    
+    def zoomIt(self, img, pxl = 1):
+        new_img = img[pxl:-1-pxl, pxl:-1-pxl]
+        fx = img.shape[0] / new_img.shape[0]
+        fy = img.shape[1] / new_img.shape[1]
+        bicubic_img = cv2.resize(new_img, None, fx = fx, fy = fy, interpolation = cv2.INTER_CUBIC)
+        return bicubic_img
     
     def getFalsePoints(self, mask, num_cubes, true_pos = []):
         #middle = 0
