@@ -32,13 +32,13 @@ class PointsImageMask:
         self.w = self.image.shape[2]
         self.h = self.image.shape[1]
         
-        self.processed_cubes = True
+        self.processed_cubes = None
         
     def get_cubes(self):
-        if self.processed_cubes:
+        if self.processed_cubes is None:
             print("Cubes have not been processed yet")
         else:
-            return self.processed_cubes, self.processed_false_cubes
+            return np.array(self.processed_cubes), np.array(self.processed_false_cubes)
             
     def add_rotate(self, angle=90, scale=1.0):
         self.params['rotate'] = [angle, scale]
@@ -176,8 +176,9 @@ class PointsImageMask:
                         image = self.zoomIt(image, pxl = pxl)
                     if verbose:
                         tock = time.clock()
-                        print("         ... completed in", round(tock-tick, 4), "seconds.\n")                        
-            return image
+                        print("         ... completed in", round(tock-tick, 4), "seconds.\n")   
+                        
+            return np.array(image)
 
     def rotateIt(self, image):
         '''
@@ -251,7 +252,6 @@ class PointsImageMask:
         return gimg
     
     def zoomIt(self, img, pxl = 1):
-        print(img)
         new_img = img[pxl:-1-pxl, pxl:-1-pxl]
         fx = img.shape[0] / new_img.shape[0]
         fy = img.shape[1] / new_img.shape[1]
@@ -331,8 +331,7 @@ if __name__ == "__main__":
     
     pim.get_params()
     pim.process(verbose = True)
-    #new_img = tda.get_img()
-    #plt.imshow(new_img[150,:,:])
+    true_cubes, false_cubes = pim.get_cubes()
     
     
     
