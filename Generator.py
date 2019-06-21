@@ -11,7 +11,7 @@ from tools import get_imgs
 from PointsImageMask import PointsImageMask as PIM
 
 class Generator:
-    def __init__(self, path, batch_size, points_list=None, z =  50, rad = 50):
+    def __init__(self, path, batch_size, points_list=None, z =  50, rad = 25):
         self.path = path
         self.points_list = points_list
         self.batch_size = batch_size
@@ -50,7 +50,7 @@ class Generator:
                 
             yield all_cubes
             
-    def generateFirst(self):
+    def generateRandom(self):
         scan_list = [folder for folder in os.listdir(self.path) if folder[-4:] != '.*']
         id = np.random.choice(scan_list, 1)[0]
         
@@ -68,7 +68,7 @@ class Generator:
             func = getattr(cubes, "add_"+p[0])
             func(*p[1])
         
-        cubes.process()
+        cubes.process(verbose = True)
         
         return cubes.get_cubes()
         
@@ -114,9 +114,7 @@ if __name__ == "__main__":
     tdg = Generator(path, 32)
     tdg.add_zoom()
     tdg.get_params()
-    cubes = tdg.generateFirst()
+    true_cubes, false_cubes = tdg.generateRandom()
 
-    print(cubes.shape)
-
-
+    true_cubes[3].shape
 
