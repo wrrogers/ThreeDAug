@@ -17,7 +17,7 @@ from tools import load_imgs, get_imgs
 
 class PointsImageMask:
     def __init__(self, points, image, mask, z, rad, pool_size = 1):
-        self.params = {}
+
         self.random = {'rotate' : 0, 'vflip' : 'True', 'hflip' : 'True'}
         self.points = points
         self.f_points = self.getFalsePoints(mask, len(points), points)
@@ -34,12 +34,14 @@ class PointsImageMask:
         
         self.processed_cubes = None
         
+        self.params = {}
+        
     def get_cubes(self):
         if self.processed_cubes is None:
             print("Cubes have not been processed yet")
         else:
             return np.array(self.processed_cubes), np.array(self.processed_false_cubes)
-            
+        
     def add_rotate(self, angle=90, scale=1.0):
         self.params['rotate'] = [angle, scale]
         
@@ -49,7 +51,7 @@ class PointsImageMask:
     def add_shift(self, shift = True):
         self.params['shift'] = [shift]
 
-    def add_elastic(self, alpha = 3, sigma = 0.07, alpha_affine = 0.09):
+    def add_elastic(self, alpha = 3, sigma = 0.07, alpha_affine = 0.09, states = 10000):
         self.params['elastic'] = [alpha*self.rad*2, sigma*self.rad*2, alpha_affine*self.rad*2, 10000]
 
     def add_noise(self, modes = None, proba = .5):
@@ -64,6 +66,7 @@ class PointsImageMask:
                     break
                 else:
                     self.params['noise'] = [modes, proba]
+                    
     
     def add_zoom(self, pxl = 6, proba = .5):
         self.params['zoom'] = [pxl, proba]
@@ -101,9 +104,8 @@ class PointsImageMask:
         '''
         Process all image transformations
         '''
-
         if len(self.params) < 1:
-            print("You first need to add parameters (i.e. add_flip or add_rotate)")
+            pass
         else:
             for p in list(self.params.keys()):
                 
@@ -177,8 +179,12 @@ class PointsImageMask:
                     if verbose:
                         tock = time.clock()
                         print("         ... completed in", round(tock-tick, 4), "seconds.\n")   
-                        
-            return np.array(image)
+            
+        final_image = np.array(image)
+        
+        print(final_image.shape)
+        
+        return final_image
 
     def rotateIt(self, image):
         '''
@@ -322,12 +328,12 @@ if __name__ == "__main__":
     img, mask = get_imgs(path, has_mask = True)
     
     pim = PointsImageMask(points, img, mask, z = 50, rad = 25)
-    #tda.add_rotate(angle = 15)
-    #tda.add_flip(vflip=True, hflip=True)    
-    #tda.add_elastic()
-    #tda.add_shift()
-    #tda.add_noise(proba = .3)
-    pim.add_zoom()
+    #pim.add_rotate(angle = 15)
+    #pim.add_flip(vflip=True, hflip=True)    
+    #pim.add_elastic()
+    #pim.add_shift()
+    #pim.add_noise(proba = .3)
+    #pim.add_zoom()
     
     pim.get_params()
     pim.process(verbose = True)

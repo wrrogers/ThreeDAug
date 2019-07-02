@@ -8,7 +8,7 @@ Created on Fri Jun 21 14:58:54 2019
 import os
 import numpy as np
 from tools import get_imgs
-from PointsImageMask import PointsImageMask as PIM
+from PointsImageMask import PointsImageMask as pim
 
 class Generator:
     def __init__(self, path, batch_size, points_list=None, z =  50, rad = 25):
@@ -21,34 +21,37 @@ class Generator:
         self.points = [[225, 367, 310], [387,177,250], [319, 387, 227], [88, 310, 171]]
         
     def generate(self):
+
         while True:
-            count = 0
             scan_list = [folder for folder in os.listdir(self.path) if folder[-4:] != '.*']
+
             all_cubes = np.empty((self.batch_size, self.z, self.rad*2, self.rad*2))
+
             for n in range(self.batch_size):
-                id = np.random.choice(scan_list, 1)
-                
+
+                id = np.random.choice(scan_list, 1)[0]
                 print("The ID:", id)
+
                 ipath = os.path.join(self.path, id)
-                print(ipath)
-                
+
+                print("\n", ipath)
+
                 img, mask = get_imgs(ipath)
-                cubes = PIM(self.points, img, mask, self.z, self.rad)
+                cubes = pim(self.points, img, mask, self.z, self.rad)
+
+                print("Image width:", cubes.w, "height:", cubes.h)
+
+                if len(self.params) > 0:
+                    for p in self.params.items():
+                        print("\nDoing ...", p[0], "\n")
+                        func = getattr(cubes, "add_"+p[0])
+                        func(*p[1])
+
+                cubes.process(verbose = True)
                 
-                
-                func = getattr(cubes, 'bar')
-                func()
-                
-                for c in range(cubes.shape[0]):
-                    count+=1
-                    all_cubes[count] = cubes[c]
-                    if count == self.batch_size:
-                        break
-                
-                if count == self.batch_size:
-                    break
-                
-            yield all_cubes
+                print(cubes.get_cubes()[0])
+
+            yield cubes.get_cubes()
             
     def generateRandom(self):
         scan_list = [folder for folder in os.listdir(self.path) if folder[-4:] != '.*']
@@ -59,7 +62,7 @@ class Generator:
         print("\n", ipath)
         
         img, mask = get_imgs(ipath)
-        cubes = PIM(self.points, img, mask, self.z, self.rad)
+        cubes = pim(self.points, img, mask, self.z, self.rad)
         
         print("Image width:", cubes.w, "height:", cubes.h)
         
@@ -71,6 +74,34 @@ class Generator:
         cubes.process(verbose = True)
         
         return cubes.get_cubes()
+    
+    def generateFromID(self, id):
+
+        print("\nThe ID:", id)
+        ipath = os.path.join(self.path, id)
+        print("\n", ipath)
+        
+        img, mask = get_imgs(ipath)
+        
+        print(img.shape)
+        
+        cubes = pim(self.points, img, mask, self.z, self.rad)
+        
+        print(cubes.get_params())
+        
+        print("Image width:", cubes.w, "height:", cubes.h)
+        
+        for p in self.params.items():
+            print("\nDoing ...", p[0], "\n")
+            func = getattr(cubes, "add_"+p[0])
+            func(*p[1])
+        
+        cubes.process(verbose = True)
+        
+        return cubes.get_cubes()    
+    
+    def add_ignore(self, state=True):
+        self.params['ignore'] = [state]
         
     def add_rotate(self, angle=90, scale=1.0):
         self.params['rotate'] = [angle, scale]
@@ -107,7 +138,7 @@ class Generator:
             print("  {:<10}\t{}".format(param[0], param[1]))
 
         
-        
+'''
 if __name__ == "__main__":
 
     path = r'F:\Data\MILDBL\mild_extracted_images'
@@ -117,4 +148,4 @@ if __name__ == "__main__":
     true_cubes, false_cubes = tdg.generateRandom()
 
     true_cubes[3].shape
-
+'''
