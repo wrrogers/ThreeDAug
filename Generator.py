@@ -8,50 +8,69 @@ Created on Fri Jun 21 14:58:54 2019
 import os
 import numpy as np
 from tools import get_imgs
-from PointsImageMask import PointsImageMask as pim
+from PointsImageMask import PointsImageMask as PIM
 
 class Generator:
-    def __init__(self, path, batch_size, points_list=None, z =  50, rad = 25):
+    def __init__(self, path, batch_size, points_list=None, points = None, z =  50, rad = 25):
         self.path = path
         self.points_list = points_list
+        self.points = points
         self.batch_size = batch_size
         self.z = z
         self.rad = rad
         self.params = {}
-        self.points = [[225, 367, 310], [387,177,250], [319, 387, 227], [88, 310, 171]]
         
     def generate(self):
-
-        while True:
-            scan_list = [folder for folder in os.listdir(self.path) if folder[-4:] != '.*']
-
-            all_cubes = np.empty((self.batch_size, self.z, self.rad*2, self.rad*2))
-
-            for n in range(self.batch_size):
-
-                id = np.random.choice(scan_list, 1)[0]
-                print("The ID:", id)
-
-                ipath = os.path.join(self.path, id)
-
-                print("\n", ipath)
-
-                img, mask = get_imgs(ipath)
-                cubes = pim(self.points, img, mask, self.z, self.rad)
-
-                print("Image width:", cubes.w, "height:", cubes.h)
-
-                if len(self.params) > 0:
-                    for p in self.params.items():
-                        print("\nDoing ...", p[0], "\n")
-                        func = getattr(cubes, "add_"+p[0])
-                        func(*p[1])
-
-                cubes.process(verbose = True)
+        if self.points_list is None:
+            print("A list of points in a pandas dataframe must be passed to create a generator.")
+        else:
+            while True:
+                count = 0
                 
-                print(cubes.get_cubes()[0])
+                #scan_list = [folder for folder in os.listdir(self.path) if folder[-4:] != '.*']
+    
+                all_true_cubes = np.empty((self.batch_size, self.z, self.rad*2, self.rad*2))
+                all_false_cubes = np.empty((self.batch_size, self.z, self.rad*2, self.rad*2))
+    
+                while count < self.batch_size:
+    
+                    id = np.random.choice(self.points_list.id.values, 1)[0]
+                    id = 'MILD_ - '+id
+                    print("The ID:", id)
+    
+                    ######## FIX THIS!!! ########
+                    ipath = os.path.join(self.path, id)
+    
+                    print("\n", ipath)
+    
+                    points = self.points_list.loc[self.points_list.id == id[8:]]
+                    points = points.drop(['id'], axis = 1)
+    
+                    img, mask = get_imgs(ipath)
+                    pim = PIM(points, img, mask, self.z, self.rad)
+    
+                    print("Image width:", pim.w, "height:", pim.h)
+    
+                    if len(self.params) > 0:
+                        for p in self.params.items():
+                            print("\nDoing ...", p[0], "\n")
+                            func = getattr(pim, "add_"+p[0])
+                            func(*p[1])
+    
+                    pim.process(verbose = True)
 
-            yield cubes.get_cubes()
+                    true_cubes, false_cubes = pim.get_cubes()
+                    print("The shape of all the cubes", true_cubes.shape)
+                    for true_cube, false_cube in zip(true_cubes, false_cubes):
+                        
+                        all_true_cubes[count] = true_cube
+                        all_false_cubes[count] = false_cube
+                        count += 1
+                        if count >= self.batch_size: break
+                    
+                    if count >= self.batch_size: break
+    
+                yield  all_true_cubes, all_false_cubes
             
     def generateRandom(self):
         scan_list = [folder for folder in os.listdir(self.path) if folder[-4:] != '.*']
@@ -62,7 +81,7 @@ class Generator:
         print("\n", ipath)
         
         img, mask = get_imgs(ipath)
-        cubes = pim(self.points, img, mask, self.z, self.rad)
+        cubes = PIM(self.points, img, mask, self.z, self.rad)
         
         print("Image width:", cubes.w, "height:", cubes.h)
         

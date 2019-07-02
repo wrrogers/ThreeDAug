@@ -182,8 +182,6 @@ class PointsImageMask:
             
         final_image = np.array(image)
         
-        print(final_image.shape)
-        
         return final_image
 
     def rotateIt(self, image):
